@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Emotion History</title>
+</head>
+<body>
+<h1>Emotion History</h1>
+<table border="1">
+    <tr>
+        <th>Detected Emotion</th>
+        <th>Song Recommendation</th>
+        <th>Timestamp</th>
+    </tr>
+    {% for emotion, song, timestamp in emotion_history %}
+    <tr>
+        <td>{{ emotion }}</td>
+        <td>{{ song }}</td>
+        <td>{{ timestamp }}</td>
+    </tr>
+    {% endfor %}
+</table>
+<a href="/">Back to Home</a>
+</body>
+</html>

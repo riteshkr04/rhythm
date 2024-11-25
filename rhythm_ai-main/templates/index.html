@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RhythmAI: Intelligent Emotion & Music Companion</title>
+    <style>
+        :root {
+            --bg-color: #ffffff;
+            --text-color: #333333;
+            --button-bg: linear-gradient(45deg, #2ecc71, #27ae60); /* Emerald Gradient */
+            --button-text: #ffffff;
+            --card-bg: #f9f9f9;
+            --card-shadow: rgba(0, 0, 0, 0.1);
+            --transition: 0.3s ease;
+        }
+
+        [data-theme="dark"] {
+            --bg-color: #121212;
+            --text-color: #ffffff;
+            --button-bg: linear-gradient(45deg, #34495e, #2c3e50); /* Dark Gradient */
+            --button-text: #ffffff;
+            --card-bg: #1f1f1f;
+            --card-shadow: rgba(255, 255, 255, 0.1);
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Helvetica', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-image: url("{{ url_for('static', filename='abc.jpg') }}");
+            background-size: cover;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+        }
+
+        h1 {
+            font-size: 3em;
+            margin-bottom: 10px;
+            text-align: center;
+            color: #8B8000;
+            font-weight: bold;
+            animation: pulse 2s infinite;
+            text-shadow: 1px 1px 2px #000;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        h2 {
+            font-size: 2em;
+            color: #F7E7CE;
+            text-align: center;
+            margin-top: 20px;
+        }
+        .emotion-options {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .emotion-options label {
+            margin: 0 15px;
+            font-size: 1.2em;
+        }
+
+        video {
+            display: block;
+            width: 100%;
+            max-width: 600px;
+            margin: 20px auto;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px var(--card-shadow);
+        }
+
+        button {
+            background: var(--button-bg);
+            color: var(--button-text);
+            border: 2px solid #2ecc71;
+            padding: 10px 20px;
+            cursor: pointer;
+            border-radius: 8px;
+            margin-top: 10px;
+            box-shadow: 0 2px 5px var(--card-shadow);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        button:hover {
+            transform: scale(1.1);
+            box-shadow: inset 0 0 10px rgba(255, 255, 255, 0.2), 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .capture-button, .history-button {
+            display: block;
+            margin: 20px auto;
+            text-align: center;
+        }
+
+        .history-button button {
+            animation: pulse 2s infinite;
+        }
+
+        .loader {
+            border: 8px solid var(--card-bg);
+            border-top: 8px solid var(--button-bg);
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 1s linear infinite;
+            display: none;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        #result p {
+            font-size: 1.5em;
+            text-align: center;
+        }
+
+        .emotion-icon, .emotion-response {
+            text-align: center;
+            font-size: 2em;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+<h1>RhythmAI: Intelligent Emotion & Music Companion</h1>
+
+<div class="emotion-options">
+    <h2>How are you feeling today?</h2>
+    <label><input type="radio" name="emotion" value="happy"> Happy 😊</label>
+    <label><input type="radio" name="emotion" value="sad"> Sad 😔</label>
+    <label><input type="radio" name="emotion" value="surprised"> Surprised 😮</label>
+    <label><input type="radio" name="emotion" value="angry"> Angry 😠</label>
+    <label><input type="radio" name="emotion" value="neutral"> Neutral 😐</label>
+</div>
+
+<h2>Capture a Photo</h2>
+<video id="video" autoplay></video>
+<div class="capture-button">
+    <button id="capture"><i class="fa fa-camera"></i> Capture</button>
+</div>
+<canvas id="canvas" style="display:none;"></canvas>
+
+<div class="loader" id="loader"></div>
+<div id="result" class="card"></div>
+
+<div id="emotion-icon" class="emotion-icon"></div>
+<div id="emotion-response" class="emotion-response"></div>
+
+<a href="/history" class="history-button">
+    <button type="button" class="pulse">View Emotion History</button>
+</a>
+
+<script>
+    const video = document.getElementById('video');
+    navigator.mediaDevices.getUserMedia({ video: true })
+        .then(stream => {
+            video.srcObject = stream;
+        });
+
+    document.getElementById('capture').onclick = function() {
+        document.getElementById('loader').style.display = 'block';
+
+        const canvas = document.getElementById('canvas');
+        const context = canvas.getContext('2d');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        context.drawImage(video, 0, 0);
+        canvas.toBlob(blob => {
+            const formData = new FormData();
+            formData.append('image', blob);
+
+            const selectedEmotion = document.querySelector('input[name="emotion"]:checked');
+            if (selectedEmotion) {
+                formData.append('emotion', selectedEmotion.value);
+            }
+
+            fetch('/predict', {
+                method: 'POST',
+                body: formData
+            })
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('result').innerHTML =
+                        `<p>Detected Emotion: <strong>${data.dominant_emotion}</strong></p>
+                                 <p>Recommended Song: <strong>${data.selected_song.song}</strong>
+                                 <a href="${data.selected_song.link}" target="_blank">Listen</a></p>`;
+                    updateEmotionDisplay(data.dominant_emotion);
+                })
+                .catch(error => console.error('Error:', error))
+                .finally(() => {
+                    document.getElementById('loader').style.display = 'none';
+                });
+        });
+    };
+
+    function updateEmotionDisplay(emotion) {
+        const emotionIcons = {
+            happy: "😊",
+            sad: "😔",
+            surprised: "😮",
+            angry: "😠",
+            fear: "😨",
+            disgust: "🤢",
+        };
+        const emotionResponses = {
+            happy: "Wow, you look happy!",
+            sad: "Oh no, feeling down?",
+            surprised: "Whoa, you seem surprised!",
+            angry: "Looks like something's bugging you.",
+            fear: "Something's scaring you, huh?",
+            disgust: "You look disgusted, what's wrong?",
+        };
+        const icon = emotionIcons[emotion] || "😶";
+        const response = emotionResponses[emotion] || "Hard to tell!";
+        document.getElementById('emotion-icon').innerHTML = icon;
+        document.getElementById('emotion-response').innerText = response;
+    }
+</script>
+</body>
+</html>
